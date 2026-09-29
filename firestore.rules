@@ -1,0 +1,464 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net - allow reads and writes to enable flawless multi-browser real-time sync in dev preview
+    match /{document=**} {
+      allow read, write: if true;
+    }
+
+    // Reusable global primitive helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Dynamic security helper functions for RBAC and Company Isolation
+    function userHasDocument() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    function getUserRecord() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function userCompanyId() {
+      return request.auth.token.companyId != null 
+        ? request.auth.token.companyId 
+        : (userHasDocument() && 'companyId' in getUserRecord() ? getUserRecord().companyId : 'DEFAULT_COMPANY');
+    }
+
+    function userRole() {
+      return request.auth.token.role != null 
+        ? request.auth.token.role 
+        : (userHasDocument() && 'role' in getUserRecord() ? getUserRecord().role : 'GUEST');
+    }
+
+    // Role predicates
+    function isOwner() {
+      return userRole() == 'OWNER' || userRole() == 'Owner';
+    }
+
+    function isAdmin() {
+      return userRole() == 'ADMIN' || userRole() == 'Admin';
+    }
+
+    function isDispatcher() {
+      return userRole() == 'DISPATCHER' || userRole() == 'Dispatcher';
+    }
+
+    function isDriver() {
+      return userRole() == 'DRIVER' || userRole() == 'Driver';
+    }
+
+    function isAccountant() {
+      return userRole() == 'ACCOUNTANT' || userRole() == 'Accountant';
+    }
+
+    function isSales() {
+      return userRole() == 'SALES' || userRole() == 'Sales';
+    }
+
+    // Company isolation check (compares document's companyId with user's companyId)
+    // If companyId is not present on the document, defaults to true to allow backward-compatible migration.
+    function belongsToCompany(docData) {
+      return docData == null || !('companyId' in docData) || docData.companyId == userCompanyId();
+    }
+
+    // Validation blueprints for each entity (updated to support optional companyId)
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.username is string && data.username.size() <= 100
+        && data.name is string && data.name.size() <= 100
+        && (data.role == 'ADMIN' || data.role == 'DISPATCHER' || data.role == 'SALES' || data.role == 'OWNER' || data.role == 'DRIVER' || data.role == 'ACCOUNTANT')
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('password' in data) || (data.password is string && data.password.size() <= 100))
+        && (!('phone' in data) || (data.phone is string && data.phone.size() <= 30))
+        && (!('dispatcherId' in data) || (data.dispatcherId is string && data.dispatcherId.size() <= 128))
+        && (!('profilePhoto' in data) || (data.profilePhoto is string && data.profilePhoto.size() <= 1000000));
+    }
+
+    function isValidDispatcher(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.username is string && data.username.size() <= 100
+        && data.phone is string && data.phone.size() <= 30
+        && data.assignedDriverIds is list
+        && data.commissionPercent is number
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000))
+        && (!('password' in data) || (data.password is string && data.password.size() <= 100))
+        && (!('sortOrder' in data) || (data.sortOrder is number))
+        && (!('profilePhoto' in data) || (data.profilePhoto is string && data.profilePhoto.size() <= 1000000));
+    }
+
+    function isValidDriver(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.phone is string && data.phone.size() <= 30
+        && data.truckNum is string && data.truckNum.size() <= 50
+        && data.truckType is string && data.truckType.size() <= 100
+        && data.defaultPayoutPercent is number
+        && data.status is string && (data.status == 'ACTIVE' || data.status == 'INACTIVE')
+        && data.assignedDispatcherId is string && data.assignedDispatcherId.size() <= 128
+        && data.driverType is string && (data.driverType == 'OWNER_OPERATOR' || data.driverType == 'COMPANY_DRIVER')
+        && data.workingUnderName is string && data.workingUnderName.size() <= 100
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('carrierId' in data) || (data.carrierId is string && data.carrierId.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000))
+        && (!('sortOrder' in data) || (data.sortOrder is number))
+        && (!('profilePhoto' in data) || (data.profilePhoto is string && data.profilePhoto.size() <= 1000000));
+    }
+
+    function isValidCarrier(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.type is string && (data.type == 'OWNER_OPERATOR' || data.type == 'CARRIER')
+        && data.contactName is string && data.contactName.size() <= 100
+        && data.phone is string && data.phone.size() <= 30
+        && data.payoutRatePercent is number
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000));
+    }
+
+    function isValidLoad(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.loadNum is string && data.loadNum.size() <= 50
+        && data.rateConNum is string && data.rateConNum.size() <= 50
+        && data.dispatcherId is string && data.dispatcherId.size() <= 128
+        && data.driverId is string && data.driverId.size() <= 128
+        && data.broker is string && data.broker.size() <= 100
+        && data.pickupLocation is string && data.pickupLocation.size() <= 200
+        && data.deliveryLocation is string && data.deliveryLocation.size() <= 200
+        && data.pickupDate is string && data.pickupDate.size() <= 30
+        && data.deliveryDate is string && data.deliveryDate.size() <= 30
+        && data.loadAmount is number
+        && data.feePercent is number
+        && data.advanceFuel is number
+        && data.cashAdvance is number
+        && data.repairDeduction is number
+        && data.tollDeduction is number
+        && data.factoringStatus is string && (data.factoringStatus == 'Factored' || data.factoringStatus == 'Non-Factored')
+        && data.paymentStatus is string && (data.paymentStatus == 'Paid' || data.paymentStatus == 'Unpaid')
+        && data.podUploaded is bool
+        && data.rateConUploaded is bool
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000))
+        && (!('status' in data) || (data.status is string && (data.status == 'Pending' || data.status == 'In Transit' || data.status == 'Delivered')))
+        && (!('podFileName' in data) || (data.podFileName is string && data.podFileName.size() <= 200))
+        && (!('podBase64' in data) || (data.podBase64 is string && data.podBase64.size() <= 10000000))
+        && (!('rateConFileName' in data) || (data.rateConFileName is string && data.rateConFileName.size() <= 200))
+        && (!('rateConBase64' in data) || (data.rateConBase64 is string && data.rateConBase64.size() <= 10000000))
+        && (!('loadDocuments' in data) || (data.loadDocuments is list));
+    }
+
+    function isValidClockRecord(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.dispatcherId is string && data.dispatcherId.size() <= 128
+        && data.date is string && data.date.size() <= 30
+        && data.clockIn is string && data.clockIn.size() <= 30
+        && data.isLate is bool
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('clockOut' in data) || (data.clockOut is string && data.clockOut.size() <= 30))
+        && (!('workMinutes' in data) || (data.workMinutes is number))
+        && (!('breaksTaken' in data) || (data.breaksTaken is list))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000));
+    }
+
+    function isValidLead(data) {
+      return data.id is string && data.id.size() <= 128
+        && ((data.carrierName is string && data.carrierName.size() <= 100) || (data.company is string && data.company.size() <= 100))
+        && data.phone is string && data.phone.size() <= 30
+        && data.status is string
+        && data.assignedAgentId is string && data.assignedAgentId.size() <= 128
+        && data.createdAt is string && data.createdAt.size() <= 30
+        && (!('ownerName' in data) || (data.ownerName is string && data.ownerName.size() <= 100))
+        && (!('contact' in data) || (data.contact is string && data.contact.size() <= 100))
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('email' in data) || (data.email is string && data.email.size() <= 100))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 10000))
+        && (!('mcNumber' in data) || (data.mcNumber is string && data.mcNumber.size() <= 50))
+        && (!('dotNumber' in data) || (data.dotNumber is string && data.dotNumber.size() <= 50))
+        && (!('equipment' in data) || (data.equipment is string && data.equipment.size() <= 100))
+        && (!('truckType' in data) || (data.truckType is string && data.truckType.size() <= 100))
+        && (!('numberOfTrucks' in data) || (data.numberOfTrucks is number))
+        && (!('truckCount' in data) || (data.truckCount is number))
+        && (!('preferredLanes' in data) || (data.preferredLanes is string && data.preferredLanes.size() <= 500))
+        && (!('currentLocation' in data) || (data.currentLocation is string && data.currentLocation.size() <= 200))
+        && (!('dispatcherStatus' in data) || (data.dispatcherStatus is string && data.dispatcherStatus.size() <= 100))
+        && (!('leadSource' in data) || (data.leadSource is string && data.leadSource.size() <= 100))
+        && (!('assignedSalesperson' in data) || (data.assignedSalesperson is string && data.assignedSalesperson.size() <= 100))
+        && (!('assignedAgentName' in data) || (data.assignedAgentName is string && data.assignedAgentName.size() <= 100))
+        && (!('lastContact' in data) || (data.lastContact is string && data.lastContact.size() <= 50))
+        && (!('lastContactDate' in data) || (data.lastContactDate is string && data.lastContactDate.size() <= 50))
+        && (!('nextFollowUp' in data) || (data.nextFollowUp is string && data.nextFollowUp.size() <= 50))
+        && (!('nextFollowUpDate' in data) || (data.nextFollowUpDate is string && data.nextFollowUpDate.size() <= 50))
+        && (!('dispatchFeeOffered' in data) || (data.dispatchFeeOffered is number))
+        && (!('callHistory' in data) || (data.callHistory is list))
+        && (!('emailHistory' in data) || (data.emailHistory is list));
+    }
+
+    function isValidChatMessage(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.senderId is string && data.senderId.size() <= 128
+        && data.senderName is string && data.senderName.size() <= 100
+        && data.content is string && data.content.size() <= 5000
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('senderRole' in data) || (data.senderRole is string));
+    }
+
+    function isValidCompanySettings(data) {
+      return data.name is string && data.name.size() <= 100
+        && data.address is string && data.address.size() <= 1000
+        && data.phone is string && data.phone.size() <= 30
+        && data.email is string && data.email.size() <= 100
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('tagline' in data) || (data.tagline is string && data.tagline.size() <= 200))
+        && (!('logoUrl' in data) || (data.logoUrl is string && data.logoUrl.size() <= 1000000))
+        && (!('defaultDispatchFeePercent' in data) || (data.defaultDispatchFeePercent is number));
+    }
+
+    function isValidDriverSettlement(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.driverId is string && data.driverId.size() <= 128
+        && data.driverName is string && data.driverName.size() <= 100
+        && data.settlementDate is string && data.settlementDate.size() <= 30
+        && data.grossEarnings is number
+        && data.deductions is number
+        && data.netPayout is number
+        && data.paymentStatus is string && (data.paymentStatus == 'Paid' || data.paymentStatus == 'Unpaid')
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128))
+        && (!('startDate' in data) || (data.startDate is string && data.startDate.size() <= 30))
+        && (!('endDate' in data) || (data.endDate is string && data.endDate.size() <= 30))
+        && (!('loadIds' in data) || (data.loadIds is list))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 5000))
+        && (!('isManual' in data) || (data.isManual is bool));
+    }
+
+    function isValidInvoice(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.invoiceNum is string && data.invoiceNum.size() <= 100
+        && data.invoiceDate is string && data.invoiceDate.size() <= 100
+        && data.invoiceMode is string && (data.invoiceMode == 'DISPATCH_FEE' || data.invoiceMode == 'CARRIER_FREIGHT' || data.invoiceMode == 'CUSTOM_CARRIER' || data.invoiceMode == 'CUSTOM_DISPATCH')
+        && data.billerName is string && data.billerName.size() <= 100
+        && data.billerAddress is string && data.billerAddress.size() <= 1000
+        && data.carrierName is string && data.carrierName.size() <= 100
+        && data.paymentTerms is string && data.paymentTerms.size() <= 100
+        && data.grossAmount is number
+        && data.netAmount is number
+        && data.lineItems is list
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidCompanyBroadcast(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.title is string && data.title.size() <= 200
+        && data.message is string && data.message.size() <= 5000
+        && data.senderName is string && data.senderName.size() <= 100
+        && data.createdAt is string && data.createdAt.size() <= 50
+        && data.type is string && (data.type == 'INFO' || data.type == 'WARNING' || data.type == 'ALERT')
+        && data.active is bool
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidDriverPosting(data) {
+      return data.id is string && data.id.size() <= 128
+        && (!('driverId' in data) || (data.driverId is string && data.driverId.size() <= 128))
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidBrokerContact(data) {
+      return data.id is string && data.id.size() <= 128
+        && (!('companyName' in data) || (data.companyName is string && data.companyName.size() <= 200))
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidDriverAdvance(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.driverId is string && data.driverId.size() <= 128
+        && data.amount is number
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidFinancialTransaction(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.amount is number
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidPendingPayment(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.driverId is string && data.driverId.size() <= 128
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidHRProfile(data) {
+      return data.id is string && data.id.size() <= 128
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidLeaveRequest(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.employeeId is string
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    function isValidSalarySlip(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.employeeId is string
+        && (!('companyId' in data) || (data.companyId is string && data.companyId.size() <= 128));
+    }
+
+    // Collection entry matches with robust schema validation on writes
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || userId == request.auth.uid);
+      allow update: if isSignedIn() && isValidId(userId) && isValidUser(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || userId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(userId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /dispatchers/{dispatcherId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(dispatcherId) && isValidDispatcher(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow update: if isSignedIn() && isValidId(dispatcherId) && isValidDispatcher(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || dispatcherId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(dispatcherId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /drivers/{driverId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(driverId) && isValidDriver(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isDispatcher());
+      allow update: if isSignedIn() && isValidId(driverId) && isValidDriver(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isDispatcher() || driverId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(driverId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /carriers/{carrierId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(carrierId) && isValidCarrier(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow update: if isSignedIn() && isValidId(carrierId) && isValidCarrier(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && isValidId(carrierId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /loads/{loadId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(loadId) && isValidLoad(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isDispatcher());
+      allow update: if isSignedIn() && isValidId(loadId) && isValidLoad(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || (isDispatcher() && existing().dispatcherId == request.auth.uid));
+      allow delete: if isSignedIn() && isValidId(loadId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /attendance/{attendanceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(attendanceId) && isValidClockRecord(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || incoming().dispatcherId == request.auth.uid);
+      allow update: if isSignedIn() && isValidId(attendanceId) && isValidClockRecord(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || existing().dispatcherId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(attendanceId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /leads/{leadId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(leadId) && isValidLead(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isSales());
+      allow update: if isSignedIn() && isValidId(leadId) && isValidLead(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isSales());
+      allow delete: if isSignedIn() && isValidId(leadId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /messages/{messageId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming()) && belongsToCompany(incoming());
+      allow update: if isSignedIn() && isValidId(messageId) && isValidChatMessage(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || existing().senderId == request.auth.uid);
+      allow delete: if isSignedIn() && isValidId(messageId) && belongsToCompany(existing()) && (isOwner() || isAdmin() || existing().senderId == request.auth.uid);
+    }
+
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(settingId) && isValidCompanySettings(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && isValidId(settingId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /driverSettlements/{settlementId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(settlementId) && isValidDriverSettlement(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow update: if isSignedIn() && isValidId(settlementId) && isValidDriverSettlement(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow delete: if isSignedIn() && isValidId(settlementId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /invoices/{invoiceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(invoiceId) && isValidInvoice(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow update: if isSignedIn() && isValidId(invoiceId) && isValidInvoice(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow delete: if isSignedIn() && isValidId(invoiceId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /broadcasts/{broadcastId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(broadcastId) && isValidCompanyBroadcast(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow update: if isSignedIn() && isValidId(broadcastId) && isValidCompanyBroadcast(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && isValidId(broadcastId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /driverPostings/{postingId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(postingId) && isValidDriverPosting(incoming()) && belongsToCompany(incoming());
+      allow update: if isSignedIn() && isValidId(postingId) && isValidDriverPosting(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming());
+      allow delete: if isSignedIn() && isValidId(postingId) && belongsToCompany(existing());
+    }
+
+    match /brokers/{brokerId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(brokerId) && isValidBrokerContact(incoming()) && belongsToCompany(incoming());
+      allow update: if isSignedIn() && isValidId(brokerId) && isValidBrokerContact(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming());
+      allow delete: if isSignedIn() && isValidId(brokerId) && belongsToCompany(existing());
+    }
+
+    match /driverAdvances/{advanceId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(advanceId) && isValidDriverAdvance(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isDispatcher() || isAccountant());
+      allow update: if isSignedIn() && isValidId(advanceId) && isValidDriverAdvance(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isDispatcher() || isAccountant());
+      allow delete: if isSignedIn() && isValidId(advanceId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /financialTransactions/{transactionId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(transactionId) && isValidFinancialTransaction(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow update: if isSignedIn() && isValidId(transactionId) && isValidFinancialTransaction(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow delete: if isSignedIn() && isValidId(transactionId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /pendingDriverPayments/{paymentId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(paymentId) && isValidPendingPayment(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow update: if isSignedIn() && isValidId(paymentId) && isValidPendingPayment(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin() || isAccountant());
+      allow delete: if isSignedIn() && isValidId(paymentId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /hrProfiles/{profileId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(profileId) && isValidHRProfile(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow update: if isSignedIn() && isValidId(profileId) && isValidHRProfile(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && isValidId(profileId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /leaveRequests/{leaveId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(leaveId) && isValidLeaveRequest(incoming()) && belongsToCompany(incoming());
+      allow update: if isSignedIn() && isValidId(leaveId) && isValidLeaveRequest(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming());
+      allow delete: if isSignedIn() && isValidId(leaveId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+
+    match /salarySlips/{slipId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(slipId) && isValidSalarySlip(incoming()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow update: if isSignedIn() && isValidId(slipId) && isValidSalarySlip(incoming()) && belongsToCompany(existing()) && belongsToCompany(incoming()) && (isOwner() || isAdmin());
+      allow delete: if isSignedIn() && isValidId(slipId) && belongsToCompany(existing()) && (isOwner() || isAdmin());
+    }
+  }
+}

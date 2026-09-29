@@ -1,0 +1,6 @@
+{
+  "name": "Dispatch and Trucking Operations Software",
+  "description": "High-performance commercial logistics console featuring load management, 2D/3D cargo fitment, sales team lead hunting CRM with MC# range outreach logs, carrier pipeline tracking, dispatcher training academy, RPM matrices, and multi-user sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

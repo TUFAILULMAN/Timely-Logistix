@@ -1,0 +1,360 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Represents a user of the system (admin, dispatcher, or sales agent)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "username": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string", "enum": ["ADMIN", "DISPATCHER", "SALES"] },
+        "phone": { "type": "string" },
+        "dispatcherId": { "type": "string" },
+        "password": { "type": "string" },
+        "profilePhoto": { "type": "string" }
+      },
+      "required": ["id", "username", "name", "role", "password"]
+    },
+    "Dispatcher": {
+      "title": "Dispatcher",
+      "description": "A dispatcher profile detailing driver list, commission rate, and records",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "username": { "type": "string" },
+        "password": { "type": "string" },
+        "phone": { "type": "string" },
+        "assignedDriverIds": { "type": "array" },
+        "commissionPercent": { "type": "number" },
+        "notes": { "type": "string" },
+        "profilePhoto": { "type": "string" }
+      },
+      "required": ["id", "name", "username", "password", "phone", "commissionPercent"]
+    },
+    "Driver": {
+      "title": "Driver",
+      "description": "A carrier fleet driver with operational fee percentage and business relationship tier",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "truckNum": { "type": "string" },
+        "truckType": { "type": "string" },
+        "defaultPayoutPercent": { "type": "number" },
+        "status": { "type": "string", "enum": ["ACTIVE", "INACTIVE"] },
+        "assignedDispatcherId": { "type": "string" },
+        "carrierId": { "type": "string" },
+        "driverType": { "type": "string", "enum": ["OWNER_OPERATOR", "COMPANY_DRIVER"] },
+        "workingUnderName": { "type": "string" },
+        "notes": { "type": "string" },
+        "profilePhoto": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "truckNum", "truckType", "defaultPayoutPercent", "status", "driverType"]
+    },
+    "CarrierOrOwner": {
+      "title": "CarrierOrOwner",
+      "description": "A collaborative transport carrier or independent owner operator group",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "type": { "type": "string", "enum": ["OWNER_OPERATOR", "CARRIER"] },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "payoutRatePercent": { "type": "number", "enum": [8, 18, 22] },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "name", "type", "contactName", "phone", "payoutRatePercent"]
+    },
+    "Load": {
+      "title": "Load",
+      "description": "A dispatch load with comprehensive tracking rates, payouts, and uploaded files",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "loadNum": { "type": "string" },
+        "rateConNum": { "type": "string" },
+        "dispatcherId": { "type": "string" },
+        "driverId": { "type": "string" },
+        "broker": { "type": "string" },
+        "pickupLocation": { "type": "string" },
+        "deliveryLocation": { "type": "string" },
+        "pickupDate": { "type": "string" },
+        "deliveryDate": { "type": "string" },
+        "loadAmount": { "type": "number" },
+        "feePercent": { "type": "number" },
+        "advanceFuel": { "type": "number" },
+        "cashAdvance": { "type": "number" },
+        "repairDeduction": { "type": "number" },
+        "tollDeduction": { "type": "number" },
+        "notes": { "type": "string" },
+        "factoringStatus": { "type": "string", "enum": ["Factored", "Non-Factored"] },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Unpaid"] },
+        "status": { "type": "string", "enum": ["Pending", "In Transit", "Delivered"] },
+        "podUploaded": { "type": "boolean" },
+        "podFileName": { "type": "string" },
+        "podBase64": { "type": "string" },
+        "rateConUploaded": { "type": "boolean" },
+        "rateConFileName": { "type": "string" },
+        "rateConBase64": { "type": "string" },
+        "loadDocuments": { "type": "array" }
+      },
+      "required": [
+        "id", "loadNum", "rateConNum", "dispatcherId", "driverId", "broker",
+        "pickupLocation", "deliveryLocation", "pickupDate", "deliveryDate",
+        "loadAmount", "feePercent", "advanceFuel", "cashAdvance", "repairDeduction", "tollDeduction",
+        "factoringStatus", "paymentStatus", "podUploaded", "rateConUploaded"
+      ]
+    },
+    "ClockRecord": {
+      "title": "ClockRecord",
+      "description": "Clock-in and clock-out digital timesheet record tracking dispatcher/agent presence",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "dispatcherId": { "type": "string" },
+        "date": { "type": "string" },
+        "clockIn": { "type": "string" },
+        "clockOut": { "type": "string" },
+        "workMinutes": { "type": "number" },
+        "isLate": { "type": "boolean" },
+        "notes": { "type": "string" }
+      },
+      "required": ["id", "dispatcherId", "date", "clockIn", "isLate"]
+    },
+    "Lead": {
+      "title": "Lead",
+      "description": "A carrier sales CRM lead tracked across the 8-stage sales pipeline with call and email histories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "company": { "type": "string" },
+        "carrierName": { "type": "string" },
+        "contact": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "contactName": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "mcNumber": { "type": "string" },
+        "dotNumber": { "type": "string" },
+        "equipment": { "type": "string" },
+        "truckType": { "type": "string" },
+        "numberOfTrucks": { "type": "number" },
+        "truckCount": { "type": "number" },
+        "preferredLanes": { "type": "string" },
+        "currentLocation": { "type": "string" },
+        "dispatcherStatus": { "type": "string" },
+        "leadSource": { "type": "string" },
+        "assignedSalesperson": { "type": "string" },
+        "assignedAgentName": { "type": "string" },
+        "assignedAgentId": { "type": "string" },
+        "lastContact": { "type": "string" },
+        "lastContactDate": { "type": "string" },
+        "nextFollowUp": { "type": "string" },
+        "nextFollowUpDate": { "type": "string" },
+        "dispatchFeeOffered": { "type": "number" },
+        "status": { "type": "string" },
+        "notes": { "type": "string" },
+        "callHistory": { "type": "array" },
+        "emailHistory": { "type": "array" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "phone", "status", "assignedAgentId", "createdAt"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A dynamic real-time dispatch chat coordination message shared across staff",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderRole": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "senderId", "senderName", "senderRole", "content", "createdAt"]
+    },
+    "CompanySettings": {
+      "title": "CompanySettings",
+      "description": "Company configuration and invoicing details with custom branding logo",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "tagline": { "type": "string" },
+        "address": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" },
+        "logoUrl": { "type": "string" },
+        "defaultDispatchFeePercent": { "type": "number" }
+      },
+      "required": ["name", "address", "phone", "email"]
+    },
+    "DriverSettlement": {
+      "title": "DriverSettlement",
+      "description": "Auto-calculated or manually inputted payout settlement statement for a driver",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "driverId": { "type": "string" },
+        "driverName": { "type": "string" },
+        "settlementDate": { "type": "string" },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "grossEarnings": { "type": "number" },
+        "deductions": { "type": "number" },
+        "netPayout": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["Paid", "Unpaid"] },
+        "loadIds": { "type": "array" },
+        "notes": { "type": "string" },
+        "isManual": { "type": "boolean" }
+      },
+      "required": ["id", "driverId", "driverName", "settlementDate", "grossEarnings", "deductions", "netPayout", "paymentStatus"]
+    },
+    "DriverDailyPosting": {
+      "title": "DriverDailyPosting",
+      "description": "Live daily driver status, location, capacity, and booking availability",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "driverId": { "type": "string" },
+        "driverName": { "type": "string" },
+        "status": { "type": "string", "enum": ["NEEDS_LOAD", "PARTIAL", "BOOKED"] },
+        "currentLocation": { "type": "string" },
+        "emptyDate": { "type": "string" },
+        "destinationPreference": { "type": "string" },
+        "routeType": { "type": "string", "enum": ["OTR", "LOCAL", "REGIONAL", "DEDICATED"] },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "driverId", "driverName", "status", "currentLocation", "emptyDate", "destinationPreference", "routeType", "updatedAt"]
+    },
+    "BrokerContact": {
+      "title": "BrokerContact",
+      "description": "Broker directory with contact information and credit terms",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "companyName": { "type": "string" },
+        "contactPerson": { "type": "string" },
+        "phone": { "type": "string" },
+        "email": { "type": "string" }
+      },
+      "required": ["id", "companyName"]
+    },
+    "HRStaffProfile": {
+      "title": "HRStaffProfile",
+      "description": "HR staff records including credentials, ID cards, letters, department, manager, and salary structure",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "role": { "type": "string" },
+        "email": { "type": "string" },
+        "phone": { "type": "string" },
+        "joiningDate": { "type": "string" },
+        "department": { "type": "string" },
+        "status": { "type": "string" },
+        "managerName": { "type": "string" }
+      },
+      "required": ["id", "name", "phone", "joiningDate", "department", "status"]
+    },
+    "LeaveRequest": {
+      "title": "LeaveRequest",
+      "description": "Vacation and medical leave requests under 27-day international labour standard and 1-year tenure protocol",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "leaveType": { "type": "string", "enum": ["VACATION", "MEDICAL"] },
+        "startDate": { "type": "string" },
+        "endDate": { "type": "string" },
+        "totalDays": { "type": "number" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] }
+      },
+      "required": ["id", "employeeId", "leaveType", "startDate", "endDate", "totalDays", "status"]
+    },
+    "SalarySlip": {
+      "title": "SalarySlip",
+      "description": "Monthly salary slip records with gross salary, bonus, deductions, and net payable",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "slipNumber": { "type": "string" },
+        "employeeId": { "type": "string" },
+        "employeeName": { "type": "string" },
+        "month": { "type": "string" },
+        "grossSalary": { "type": "number" },
+        "bonusAmount": { "type": "number" },
+        "netPayable": { "type": "number" },
+        "paymentStatus": { "type": "string", "enum": ["PAID", "PENDING"] }
+      },
+      "required": ["id", "slipNumber", "employeeId", "month", "grossSalary", "netPayable", "paymentStatus"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": "User",
+      "description": "Dynamic ledger of user profiles and administrative passwords"
+    },
+    "hrProfiles/{profileId}": {
+      "schema": "HRStaffProfile",
+      "description": "Comprehensive HR records, ID cards, education docs, company letters, and salary structure"
+    },
+    "leaveRequests/{leaveId}": {
+      "schema": "LeaveRequest",
+      "description": "Vacation and medical leave requests and balances under 27-day protocol"
+    },
+    "salarySlips/{slipId}": {
+      "schema": "SalarySlip",
+      "description": "Monthly salary slip records and payout vouchers"
+    },
+    "dispatchers/{dispatcherId}": {
+      "schema": "Dispatcher",
+      "description": "Operational dispatch desks with customizable notes"
+    },
+    "drivers/{driverId}": {
+      "schema": "Driver",
+      "description": "Global list of drivers and associated dispatch/carrier relationships"
+    },
+    "carriers/{carrierId}": {
+      "schema": "CarrierOrOwner",
+      "description": "Carriers and independent owner operator partners"
+    },
+    "loads/{loadId}": {
+      "schema": "Load",
+      "description": "Digital ledger of all loads run through the logistics operations"
+    },
+    "attendance/{attendanceId}": {
+      "schema": "ClockRecord",
+      "description": "Dispatcher and sales representative timesheet entries"
+    },
+    "leads/{leadId}": {
+      "schema": "Lead",
+      "description": "Hunted prospects and status tracking sheets managed by sales representative team"
+    },
+    "messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Team chat feed for dispatch and operations coordination"
+    },
+    "settings/{settingId}": {
+      "schema": "CompanySettings",
+      "description": "App branding configurations, invoice letterheads, and default service rates"
+    },
+    "driverSettlements/{settlementId}": {
+      "schema": "DriverSettlement",
+      "description": "Statement records tracking completed payouts and fees allocated to drivers"
+    },
+    "driverPostings/{postingId}": {
+      "schema": "DriverDailyPosting",
+      "description": "Daily live driver availability postings and ticket banners"
+    },
+    "brokers/{brokerId}": {
+      "schema": "BrokerContact",
+      "description": "Directory of freight brokers and factoring credit profiles"
+    }
+  }
+}

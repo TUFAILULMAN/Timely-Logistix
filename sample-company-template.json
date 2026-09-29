@@ -1,0 +1,191 @@
+{
+  "version": "2.0.0",
+  "exportedAt": "2026-09-03T12:00:00.000Z",
+  "systemTitle": "Apex Freight Logistics & Dispatch System",
+  "companySettings": {
+    "companyName": "Apex Freight Logistics LLC",
+    "contactEmail": "dispatch@apexfreight.example.com",
+    "contactPhone": "+1 (800) 555-0199",
+    "address": "1200 Logistics Parkway, Suite 400, Dallas, TX 75201",
+    "mcNumber": "MC-987654",
+    "usdotNumber": "USDOT-3456789",
+    "defaultCommissionRate": 8,
+    "primaryColor": "#1e3a8a",
+    "secondaryColor": "#0f766e",
+    "systemTitle": "Apex Logistics TMS & HR Hub",
+    "themeMode": "LIGHT"
+  },
+  "users": [
+    {
+      "id": "u-admin-demo",
+      "username": "admin",
+      "name": "Operations Admin",
+      "role": "ADMIN",
+      "password": "admin123"
+    },
+    {
+      "id": "u-disp-demo",
+      "username": "dispatcher1",
+      "name": "Sarah Miller",
+      "role": "DISPATCHER",
+      "password": "disp123"
+    },
+    {
+      "id": "u-sales-demo",
+      "username": "sales1",
+      "name": "David Clark",
+      "role": "SALES",
+      "password": "sales123"
+    }
+  ],
+  "dispatchers": [
+    {
+      "id": "disp-1",
+      "name": "Sarah Miller",
+      "assignedTrucks": ["TRK-101", "TRK-102"],
+      "commissionRatePercent": 1.5,
+      "email": "sarah@apexfreight.example.com",
+      "phone": "+1 (555) 234-5678",
+      "active": true
+    }
+  ],
+  "drivers": [
+    {
+      "id": "drv-1",
+      "truckNumber": "TRK-101",
+      "driverName": "John Carter",
+      "phone": "+1 (555) 345-6789",
+      "carrierId": "carr-1",
+      "trailerNumber": "53V-901",
+      "trailerType": "Dry Van",
+      "status": "Available",
+      "homeLocation": "Dallas, TX",
+      "currentLocation": "Atlanta, GA",
+      "notes": "Prefers Midwest to Southeast corridors. Clean MVR."
+    },
+    {
+      "id": "drv-2",
+      "truckNumber": "TRK-102",
+      "driverName": "Marcus Vance",
+      "phone": "+1 (555) 456-7890",
+      "carrierId": "carr-2",
+      "trailerNumber": "53R-404",
+      "trailerType": "Reefer",
+      "status": "On Trip",
+      "homeLocation": "Chicago, IL",
+      "currentLocation": "Indianapolis, IN",
+      "notes": "Temperature controlled specialist. TWIC certified."
+    }
+  ],
+  "carriers": [
+    {
+      "id": "carr-1",
+      "carrierName": "Vanguard Express LLC",
+      "ownerName": "Robert Davis",
+      "phone": "+1 (555) 111-2233",
+      "email": "accounting@vanguardexpress.example.com",
+      "mcNumber": "MC-882190",
+      "dotNumber": "DOT-3112440",
+      "truckType": "53ft Dry Van",
+      "truckCount": 3,
+      "payoutRatePercent": 8,
+      "defaultDispatchRatePercent": 8,
+      "hasFactoring": true,
+      "factoringCompanyName": "Apex Capital Factoring",
+      "insuranceCompanyName": "Progressive Commercial",
+      "liabilityLimit": "$1,000,000",
+      "cargoLimit": "$100,000",
+      "status": "Active",
+      "notes": "Direct pay via Apex Capital. Quick pay qualified."
+    },
+    {
+      "id": "carr-2",
+      "carrierName": "Blue Ridge Hauling Corp",
+      "ownerName": "Emily Stone",
+      "phone": "+1 (555) 333-4455",
+      "email": "dispatch@blueridge.example.com",
+      "mcNumber": "MC-771239",
+      "dotNumber": "DOT-2987110",
+      "truckType": "53ft Reefer",
+      "truckCount": 2,
+      "payoutRatePercent": 7.5,
+      "defaultDispatchRatePercent": 7.5,
+      "hasFactoring": false,
+      "insuranceCompanyName": "Great West Casualty",
+      "liabilityLimit": "$1,000,000",
+      "cargoLimit": "$100,000",
+      "status": "Active",
+      "notes": "Direct wire/ACH payment. Excellent on-time record."
+    }
+  ],
+  "loads": [
+    {
+      "id": "load-101",
+      "loadNumber": "LD-2026-001",
+      "brokerName": "C.H. Robinson",
+      "brokerPhone": "+1 (800) 323-7587",
+      "driverId": "drv-1",
+      "truckNumber": "TRK-101",
+      "origin": "Atlanta, GA",
+      "destination": "Dallas, TX",
+      "pickupDate": "2026-09-04",
+      "deliveryDate": "2026-09-06",
+      "grossRate": 2850,
+      "miles": 780,
+      "ratePerMile": 3.65,
+      "status": "Booked",
+      "notes": "Dry freight pallets, clean van required."
+    }
+  ],
+  "leads": [
+    {
+      "id": "lead-1",
+      "companyName": "Summit Transit LLC",
+      "contactName": "Michael Scott",
+      "phone": "+1 (555) 888-9900",
+      "email": "mscott@summittransit.example.com",
+      "mcNumber": "MC-654321",
+      "truckCount": 4,
+      "equipmentType": "Dry Van",
+      "status": "Interested",
+      "leadScore": 85,
+      "assignedTo": "sales1",
+      "notes": "Looking for dedicated dispatch for 2 OTR trucks."
+    }
+  ],
+  "brokers": [
+    {
+      "id": "brk-1",
+      "companyName": "C.H. Robinson",
+      "contactPerson": "Freight Desk",
+      "phone": "+1 (800) 323-7587",
+      "email": "loads@chrobinson.com",
+      "creditRating": "A+",
+      "daysToPay": 21,
+      "notes": "QuickPay available with 2% discount."
+    },
+    {
+      "id": "brk-2",
+      "companyName": "TQL (Total Quality Logistics)",
+      "contactPerson": "Logistics Coordinator",
+      "phone": "+1 (800) 580-3101",
+      "email": "carrier@tql.com",
+      "creditRating": "A",
+      "daysToPay": 28,
+      "notes": "Requires check calls twice daily."
+    }
+  ],
+  "trainingScripts": {
+    "coldCallTitle": "Carrier Cold Call Pitch (60 Seconds)",
+    "coldCallScript": "\"Hello, is this [Owner Name]? Hi [Owner Name], my name is [Your Name] with [Company Name]. I noticed your active MC# [MC Number] and saw you operate [Dry Van/Reefer/Flatbed] equipment.\n\nWe partner with independent owner-operators in your key lanes offering $2.80 - $3.40 RPM with zero forced dispatch. We handle all rate negotiations, detention claims, and broker paperwork for a flat 7-8% fee so you stay driving and profitable.\n\nDo you currently have an open truck available this week?\"",
+    "emailScriptSubject": "High-Paying Loads for MC# [MC Number] - [Equipment Type]",
+    "emailScriptBody": "Dear [Owner / Carrier Name],\n\nI hope you're having a safe week on the road!\n\nMy name is [Your Name] from [Company Name] Dispatch Services. We partner with independent owner-operators and small fleets running [Dry Van / Reefer / Flatbed / Box Truck] to secure top-dollar market rates.\n\nWhy carriers choose our dispatch team:\n✓ Premium Gross Rates: Average $6,500 - $9,000+ weekly gross per truck\n✓ No Forced Dispatch: You approve every load, rate, and lane before booking\n✓ Dedicated Lane Strategy: Less deadhead, consistent backhauls\n✓ Complete Back-Office Support: Rate cons, billing, NOA, COI, and detention tracking\n\nReply with your current equipment location and trailer type, or call us at [Your Phone Number] to get loaded today!",
+    "objections": [
+      {
+        "id": "obj-1",
+        "objection": "I already have a dispatcher or use load boards myself.",
+        "rebuttal": "I respect that! Many of our top earners used to self-dispatch from truck stops. What they discovered is that having our team dedicated to load bidding 8 hours a day lets them add an extra $1,200 - $2,000 each week in gross revenue, without ever having to pull over to negotiate rates. Can we test one run with zero obligation?"
+      }
+    ]
+  }
+}
